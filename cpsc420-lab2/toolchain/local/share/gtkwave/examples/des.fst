@@ -1,0 +1,1 @@
+../../../encap/gtkwave-3.3.64/share/gtkwave/examples/des.fst

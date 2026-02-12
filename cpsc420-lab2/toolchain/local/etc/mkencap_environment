@@ -1,0 +1,4 @@
+HOME=/
+PATH=/bin:/usr/bin
+CC=gcc
+CFLAGS=-O

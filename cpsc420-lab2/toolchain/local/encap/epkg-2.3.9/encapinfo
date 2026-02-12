@@ -1,0 +1,4 @@
+encap 2.0	# libencap-2.3.9
+platform Linux-2.6.32-504.3.3.el6.x86_64
+date Fri Jan 30 14:55:28 EST 2015
+contact "Jonathan M. Balkind" <jbalkind@adroit3>

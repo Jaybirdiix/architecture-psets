@@ -1,0 +1,2 @@
+#!/bin/sh
+"${CS505_HOME}/local/encap/iverilog-0.9.7/bin/iverilog" -B "${CS505_HOME}/local/encap/iverilog-0.9.7/lib/ivl" $@

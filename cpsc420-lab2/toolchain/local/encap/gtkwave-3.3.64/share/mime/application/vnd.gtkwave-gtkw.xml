@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mime-type xmlns="http://www.freedesktop.org/standards/shared-mime-info" type="application/vnd.gtkwave-gtkw">
+  <!--Created automatically by update-mime-database. DO NOT EDIT!-->
+  <glob pattern="*.gtkw"/>
+  <comment>GTKWave Save File</comment>
+</mime-type>

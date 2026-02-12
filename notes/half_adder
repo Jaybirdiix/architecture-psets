@@ -1,0 +1,73 @@
+#! /usr/local/Cellar/icarus-verilog/12.0/bin/vvp
+:ivl_version "12.0 (stable)";
+:ivl_delay_selection "TYPICAL";
+:vpi_time_precision + 0;
+:vpi_module "/usr/local/Cellar/icarus-verilog/12.0/lib/ivl/system.vpi";
+:vpi_module "/usr/local/Cellar/icarus-verilog/12.0/lib/ivl/vhdl_sys.vpi";
+:vpi_module "/usr/local/Cellar/icarus-verilog/12.0/lib/ivl/vhdl_textio.vpi";
+:vpi_module "/usr/local/Cellar/icarus-verilog/12.0/lib/ivl/v2005_math.vpi";
+:vpi_module "/usr/local/Cellar/icarus-verilog/12.0/lib/ivl/va_math.vpi";
+S_0x7f90aef046b0 .scope module, "half_adder_test" "half_adder_test" 2 3;
+ .timescale 0 0;
+v0x7f90aec09c20_0 .var "a", 0 0;
+v0x7f90aec09ce0_0 .var "b", 0 0;
+v0x7f90aec09d90_0 .net "c_out", 0 0, L_0x7f90aec0a040;  1 drivers
+v0x7f90aec09e60_0 .net "s", 0 0, L_0x7f90aec09f10;  1 drivers
+S_0x7f90aef04820 .scope module, "dut" "half_adder" 2 12, 3 3 0, S_0x7f90aef046b0;
+ .timescale 0 0;
+    .port_info 0 /INPUT 1 "a";
+    .port_info 1 /INPUT 1 "b";
+    .port_info 2 /OUTPUT 1 "s";
+    .port_info 3 /OUTPUT 1 "c_out";
+L_0x7f90aec09f10 .functor XOR 1, v0x7f90aec09c20_0, v0x7f90aec09ce0_0, C4<0>, C4<0>;
+L_0x7f90aec0a040 .functor AND 1, v0x7f90aec09c20_0, v0x7f90aec09ce0_0, C4<1>, C4<1>;
+v0x7f90aef049f0_0 .net "a", 0 0, v0x7f90aec09c20_0;  1 drivers
+v0x7f90aec099c0_0 .net "b", 0 0, v0x7f90aec09ce0_0;  1 drivers
+v0x7f90aec09a70_0 .net "c_out", 0 0, L_0x7f90aec0a040;  alias, 1 drivers
+v0x7f90aec09b20_0 .net "s", 0 0, L_0x7f90aec09f10;  alias, 1 drivers
+    .scope S_0x7f90aef046b0;
+T_0 ;
+    %vpi_call 2 22 "$dumpfile", "dump.vcd" {0 0 0};
+    %vpi_call 2 23 "$dumpvars" {0 0 0};
+    %end;
+    .thread T_0;
+    .scope S_0x7f90aef046b0;
+T_1 ;
+    %pushi/vec4 0, 0, 1;
+    %assign/vec4 v0x7f90aec09c20_0, 0;
+    %pushi/vec4 0, 0, 1;
+    %assign/vec4 v0x7f90aec09ce0_0, 0;
+    %delay 1, 0;
+    %pushi/vec4 0, 0, 1;
+    %assign/vec4 v0x7f90aec09c20_0, 0;
+    %pushi/vec4 0, 0, 1;
+    %assign/vec4 v0x7f90aec09ce0_0, 0;
+    %vpi_call 2 37 "$strobe", "a = %h , b = %h , s = %h , c_out = %h", v0x7f90aec09c20_0, v0x7f90aec09ce0_0, v0x7f90aec09e60_0, v0x7f90aec09d90_0 {0 0 0};
+    %delay 1, 0;
+    %pushi/vec4 1, 0, 1;
+    %assign/vec4 v0x7f90aec09c20_0, 0;
+    %pushi/vec4 0, 0, 1;
+    %assign/vec4 v0x7f90aec09ce0_0, 0;
+    %vpi_call 2 42 "$strobe", "a = %h , b = %h , s = %h , c_out = %h", v0x7f90aec09c20_0, v0x7f90aec09ce0_0, v0x7f90aec09e60_0, v0x7f90aec09d90_0 {0 0 0};
+    %delay 1, 0;
+    %pushi/vec4 0, 0, 1;
+    %assign/vec4 v0x7f90aec09c20_0, 0;
+    %pushi/vec4 1, 0, 1;
+    %assign/vec4 v0x7f90aec09ce0_0, 0;
+    %vpi_call 2 47 "$strobe", "a = %h , b = %h , s = %h , c_out = %h", v0x7f90aec09c20_0, v0x7f90aec09ce0_0, v0x7f90aec09e60_0, v0x7f90aec09d90_0 {0 0 0};
+    %delay 1, 0;
+    %pushi/vec4 1, 0, 1;
+    %assign/vec4 v0x7f90aec09c20_0, 0;
+    %pushi/vec4 1, 0, 1;
+    %assign/vec4 v0x7f90aec09ce0_0, 0;
+    %vpi_call 2 52 "$strobe", "a = %h , b = %h , s = %h , c_out = %h", v0x7f90aec09c20_0, v0x7f90aec09ce0_0, v0x7f90aec09e60_0, v0x7f90aec09d90_0 {0 0 0};
+    %delay 1, 0;
+    %vpi_call 2 55 "$finish" {0 0 0};
+    %end;
+    .thread T_1;
+# The file index is used to find the file name in the following table.
+:file_names 4;
+    "N/A";
+    "<interactive>";
+    "half_adder.t.v";
+    "half_adder.v";
