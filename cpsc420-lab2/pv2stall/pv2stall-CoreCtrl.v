@@ -452,10 +452,10 @@ module parc_CoreCtrl
       
       // beq, blez, bgtz, bltz, bgez - branch instructions
       `PARC_INST_MSG_BEQ     :cs={ y,  n,    br_beq,  pm_b,   am_rdat, y, bm_rdat, y, alu_xor,  md_x,    n, mdm_x, em_x,   nr,  ml_x, dmm_x,  wm_x,   n,  rx, n   };
-      `PARC_INST_MSG_BLEZ     :cs={ y,  n,    br_blez,  pm_b,   am_rdat, y, bm_rdat, y, alu_xor,  md_x,    n, mdm_x, em_x,   nr,  ml_x, dmm_x,  wm_x,   n,  rx, n   };
-      `PARC_INST_MSG_BGTZ     :cs={ y,  n,    br_bgtz,  pm_b,   am_rdat, y, bm_rdat, y, alu_xor,  md_x,    n, mdm_x, em_x,   nr,  ml_x, dmm_x,  wm_x,   n,  rx, n   };
-      `PARC_INST_MSG_BLTZ     :cs={ y,  n,    br_bltz,  pm_b,   am_rdat, y, bm_rdat, y, alu_xor,  md_x,    n, mdm_x, em_x,   nr,  ml_x, dmm_x,  wm_x,   n,  rx, n   };
-      `PARC_INST_MSG_BGEZ     :cs={ y,  n,    br_bgez,  pm_b,   am_rdat, y, bm_rdat, y, alu_xor,  md_x,    n, mdm_x, em_x,   nr,  ml_x, dmm_x,  wm_x,   n,  rx, n   };
+      `PARC_INST_MSG_BLEZ     :cs={ y,  n,    br_blez,  pm_b,   am_rdat, y, bm_0, n, alu_add,  md_x,    n, mdm_x, em_x,   nr,  ml_x, dmm_x,  wm_x,   n,  rx, n   };
+      `PARC_INST_MSG_BGTZ     :cs={ y,  n,    br_bgtz,  pm_b,   am_rdat, y, bm_0, n, alu_add,  md_x,    n, mdm_x, em_x,   nr,  ml_x, dmm_x,  wm_x,   n,  rx, n   };
+      `PARC_INST_MSG_BLTZ     :cs={ y,  n,    br_bltz,  pm_b,   am_rdat, y, bm_0, n, alu_add,  md_x,    n, mdm_x, em_x,   nr,  ml_x, dmm_x,  wm_x,   n,  rx, n   };
+      `PARC_INST_MSG_BGEZ     :cs={ y,  n,    br_bgez,  pm_b,   am_rdat, y, bm_0, n, alu_add,  md_x,    n, mdm_x, em_x,   nr,  ml_x, dmm_x,  wm_x,   n,  rx, n   };
       
       // mul, div, divu, rem, remu
       //                               j     br       pc      op0      rs op1      rt alu       md       md md     ex      mem  mem   memresp wb      rf      cp0
@@ -660,15 +660,33 @@ module parc_CoreCtrl
 
   // Branch Conditions
 
-  wire bne_resolve_Xhl  = ~branch_cond_eq_Xhl;
+  // br_sel_Xhl --> branch type decoded earlier
+  // one of beq, bne, blez, etc
+
+  // we get three facts
+  // branch_cond_eq_Xhl - compare says equal
+  // branch_cond_zero_Xhl - value being tested is zero
+  // branch_cond_neg_Xhl - value being tested is negative
+
 
   // Resolve Branch
 
-  wire bne_taken_Xhl  = ( ( br_sel_Xhl == br_bne ) && bne_resolve_Xhl );
+  wire bne_taken_Xhl  = ( ( br_sel_Xhl == br_bne ) && (~branch_cond_eq_Xhl) );
+  wire beq_taken_Xhl  = ( br_sel_Xhl == br_beq  ) &&  branch_cond_eq_Xhl;
+  wire blez_taken_Xhl  = ( br_sel_Xhl == br_blez  ) &&  (branch_cond_zero_Xhl || branch_cond_neg_Xhl);
+  wire bgtz_taken_Xhl  = ( br_sel_Xhl == br_bgtz  ) &&  (~branch_cond_neg_Xhl && ~branch_cond_zero_Xhl);
+  wire bltz_taken_Xhl  = ( br_sel_Xhl == br_bltz  ) &&  branch_cond_neg_Xhl;
+  wire bgez_taken_Xhl  = ( br_sel_Xhl == br_bgez  ) &&  ~branch_cond_neg_Xhl;
 
-  wire any_br_taken_Xhl
-    = ( bne_taken_Xhl
-      );
+
+
+  wire any_br_taken_Xhl = 
+       bne_taken_Xhl
+    || blez_taken_Xhl
+    || bgtz_taken_Xhl
+    || bltz_taken_Xhl
+    || bgez_taken_Xhl
+    || beq_taken_Xhl;
 
   wire brj_taken_Xhl = ( inst_val_Xhl && any_br_taken_Xhl );
 
