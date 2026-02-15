@@ -28,6 +28,13 @@ module parc_CoreCtrl
 
   // Controls Signals (ctrl->dpath)
 
+//my code
+  // Bypass mux selects (ctrl->dpath)
+  output [1:0]     rs_byp_mux_sel_Dhl,
+  output [1:0]     rt_byp_mux_sel_Dhl,
+//end my code
+
+
   output  [1:0]     pc_mux_sel_Phl,
   output  [1:0]     op0_mux_sel_Dhl,
   output  [2:0]     op1_mux_sel_Dhl,
@@ -342,7 +349,39 @@ module parc_CoreCtrl
 
     cs = {cs_sz{1'bx}}; // Default to invalid instruction
 
+    // n is 0, y is one (yes/no)
+    // rx, r0, rL are all five bits, x, 0 and 31 respectively - register specifiers?
+    // branch types are all three bits br_?
+    // x, none, eq, ne, lez, gtz, ltz, gez are x, 0, 1, 2, 3, 4, 5, 6
+    // pc mux select is two bits pm_? p+4, branch, jump, jump register
+    // x,p, b, j, r = x, 0, 1, 2, 3
+    // operand 0 mux select: 2 bits am_?
+    // x, rdat, am_sh, am_16, am_0 = 0, 1, 2, 3
+    // operand 1 mux select: 3 bits bm_?
+    // x, rdat, zi, si, pc, 0 = x, 0, 1, 2, 3, 4
+    // alu function, 4 bits, alu_?
+    // x, add, sub, sll, or, lt, ltu, and, xor, nor, srl, sra = x, 0-10
+    // muldiv function three bits md_?
+    // x, mul, div, divu, rem, remu = 0-4
+    // muldiv mux select 1 bit mdm_?
+    // x, 0, 1 = take lower half of 64-bit result (mul/div/divu) OR take upper half of 64-bit result (rem/remu)
+    // execute mux select, one bit em_?
+    // x, alu, md = 0, 1
+    // memory request type two bits
+    // nr (no request), ld (load), st (store) = 0, 1, 2
+    // subword memop two bits ml_?
+    // x, w, b, h = x, 0, 1, 2
+    // memory response mux select three bits dmm_?
+    // x, w, b, bu, h, hu = 0-4
+    // writeback mux one wb_?
+    // x, alu, mem = 0, 1
+
+
+
+
     casez ( ir_Dhl )
+
+    // valid instruction, jump taken, not a branch, next pc is pc+4, 
 
       //                               j     br       pc      op0      rs op1      rt alu       md       md md     ex      mem  mem   memresp wb      rf      cp0
       //                           val taken type     muxsel  muxsel   en muxsel   en fn        fn       en muxsel muxsel  rq   len   muxsel  muxsel  wen wa  wen
@@ -350,19 +389,90 @@ module parc_CoreCtrl
 
       `PARC_INST_MSG_ADDIU   :cs={ y,  n,    br_none, pm_p,   am_rdat, y, bm_si,   n, alu_add,  md_x,    n, mdm_x, em_alu, nr,  ml_x, dmm_x,  wm_alu, y,  rt, n   };
       `PARC_INST_MSG_ORI     :cs={ y,  n,    br_none, pm_p,   am_rdat, y, bm_zi,   n, alu_or,   md_x,    n, mdm_x, em_alu, nr,  ml_x, dmm_x,  wm_alu, y,  rt, n   };
-      `PARC_INST_MSG_LUI     :cs={ y,  n,    br_none, pm_p,   am_16,   y, bm_zi,   n, alu_sll,  md_x,    n, mdm_x, em_alu, nr,  ml_x, dmm_x,  wm_alu, y,  rt, n   };
+      `PARC_INST_MSG_LUI     :cs={ y,  n,    br_none, pm_p,   am_16,   n, bm_zi,   n, alu_sll,  md_x,    n, mdm_x, em_alu, nr,  ml_x, dmm_x,  wm_alu, y,  rt, n   };
 
+      // diff between addiu and add:
+      // addu takes in rt (two register inputs vs one), chooses r source value for op0 for both, but addiu takes bm_signed immediate instead of rt as a second input
       `PARC_INST_MSG_ADDU    :cs={ y,  n,    br_none, pm_p,   am_rdat, y, bm_rdat, y, alu_add,  md_x,    n, mdm_x, em_alu, nr,  ml_x, dmm_x,  wm_alu, y,  rd, n   };
 
       `PARC_INST_MSG_LW      :cs={ y,  n,    br_none, pm_p,   am_rdat, y, bm_si,   n, alu_add,  md_x,    n, mdm_x, em_x,   ld,  ml_w, dmm_w,  wm_mem, y,  rt, n   };
       `PARC_INST_MSG_SW      :cs={ y,  n,    br_none, pm_p,   am_rdat, y, bm_si,   y, alu_add,  md_x,    n, mdm_x, em_x,   st,  ml_w, dmm_w,  wm_mem, n,  rx, n   };
 
       `PARC_INST_MSG_JAL     :cs={ y,  y,    br_none, pm_j,   am_0,    n, bm_pc,   n, alu_add,  md_x,    n, mdm_x, em_alu, nr,  ml_x, dmm_x,  wm_alu, y,  rL, n   };
-      `PARC_INST_MSG_JR      :cs={ y,  y,    br_none, pm_r,   am_rdat, y, bm_x,    n, alu_x,    md_x,    n, mdm_x, em_x,   nr,  ml_x, dmm_x,  wm_x,   n,  rx, n   };
+      // wait no i get it we take the NEXT PROGRAM COUNTER which will be the jump address, add zero, and write it to the output register
+      // for the register one pretty much everything is disabled because we set pm_r and read from that ? yeass i think so
+      `PARC_INST_MSG_JR      :cs={ y,  y,    br_none, pm_r,   am_x,    y, bm_x,    n, alu_x,    md_x,    n, mdm_x, em_x,   nr,  ml_x, dmm_x,  wm_x,   n,  rx, n   };
       `PARC_INST_MSG_BNE     :cs={ y,  n,    br_bne,  pm_b,   am_rdat, y, bm_rdat, y, alu_xor,  md_x,    n, mdm_x, em_x,   nr,  ml_x, dmm_x,  wm_x,   n,  rx, n   };
 
       `PARC_INST_MSG_MTC0    :cs={ y,  n,    br_none, pm_p,   am_0,    n, bm_rdat, y, alu_add,  md_x,    n, mdm_x, em_alu, nr,  ml_x, dmm_x,  wm_alu, n,  rx, y   };
 
+
+
+      //                               j     br       pc      op0      rs op1      rt alu       md       md md     ex      mem  mem   memresp wb      rf      cp0
+      //                           val taken type     muxsel  muxsel   en muxsel   en fn        fn       en muxsel muxsel  rq   len   muxsel  muxsel  wen wa  wen
+      // andi, xori, sll, srl, sra, slti, sltiu - Register-Immediate Arithmetic Instructions ---------------------------
+      `PARC_INST_MSG_ANDI     :cs={ y,  n,    br_none, pm_p,   am_rdat, y, bm_zi,   n, alu_and,   md_x,    n, mdm_x, em_alu, nr,  ml_x, dmm_x,  wm_alu, y,  rt, n   };
+      `PARC_INST_MSG_XORI     :cs={ y,  n,    br_none, pm_p,   am_rdat, y, bm_zi,   n, alu_xor,   md_x,    n, mdm_x, em_alu, nr,  ml_x, dmm_x,  wm_alu, y,  rt, n   };
+      
+      `PARC_INST_MSG_SLTI     :cs={ y,  n,    br_none, pm_p,   am_rdat, y, bm_si,   n, alu_lt,   md_x,    n, mdm_x, em_alu, nr,  ml_x, dmm_x,  wm_alu, y,  rt, n   };
+      `PARC_INST_MSG_SLTIU     :cs={ y,  n,    br_none, pm_p,   am_rdat, y, bm_si,   n, alu_ltu,   md_x,    n, mdm_x, em_alu, nr,  ml_x, dmm_x,  wm_alu, y,  rt, n   };
+
+      // shifts
+      `PARC_INST_MSG_SLL     :cs={ y,  n,    br_none, pm_p,   am_sh, y, bm_rdat,   y, alu_sll,   md_x,    n, mdm_x, em_alu, nr,  ml_x, dmm_x,  wm_alu, y,  rd, n   };
+      `PARC_INST_MSG_SRL     :cs={ y,  n,    br_none, pm_p,   am_sh, y, bm_rdat,   y, alu_srl,   md_x,    n, mdm_x, em_alu, nr,  ml_x, dmm_x,  wm_alu, y,  rd, n   };
+      `PARC_INST_MSG_SRA     :cs={ y,  n,    br_none, pm_p,   am_sh, y, bm_rdat,   y, alu_sra,   md_x,    n, mdm_x, em_alu, nr,  ml_x, dmm_x,  wm_alu, y,  rd, n   };
+      
+
+
+      // subu, slt, sltu, sllv, srlv, srav, and, or, xor, nor - reg reg arithmetic ----------------------------------------
+      `PARC_INST_MSG_OR     :cs={ y,  n,    br_none, pm_p,   am_rdat, y, bm_rdat,   y, alu_or,   md_x,    n, mdm_x, em_alu, nr,  ml_x, dmm_x,  wm_alu, y,  rd, n   };
+      `PARC_INST_MSG_XOR     :cs={ y,  n,    br_none, pm_p,   am_rdat, y, bm_rdat,   y, alu_xor,   md_x,    n, mdm_x, em_alu, nr,  ml_x, dmm_x,  wm_alu, y,  rd, n   };
+      `PARC_INST_MSG_NOR     :cs={ y,  n,    br_none, pm_p,   am_rdat, y, bm_rdat,   y, alu_nor,   md_x,    n, mdm_x, em_alu, nr,  ml_x, dmm_x,  wm_alu, y,  rd, n   };
+      `PARC_INST_MSG_AND     :cs={ y,  n,    br_none, pm_p,   am_rdat, y, bm_rdat,   y, alu_and,   md_x,    n, mdm_x, em_alu, nr,  ml_x, dmm_x,  wm_alu, y,  rd, n   };
+
+      `PARC_INST_MSG_SUBU    :cs={ y,  n,    br_none, pm_p,   am_rdat, y, bm_rdat, y, alu_sub,  md_x,    n, mdm_x, em_alu, nr,  ml_x, dmm_x,  wm_alu, y,  rd, n   };
+      
+      `PARC_INST_MSG_SLT    :cs={ y,  n,    br_none, pm_p,   am_rdat, y, bm_rdat, y, alu_lt,  md_x,    n, mdm_x, em_alu, nr,  ml_x, dmm_x,  wm_alu, y,  rd, n   };
+      `PARC_INST_MSG_SLTU    :cs={ y,  n,    br_none, pm_p,   am_rdat, y, bm_rdat, y, alu_ltu,  md_x,    n, mdm_x, em_alu, nr,  ml_x, dmm_x,  wm_alu, y,  rd, n   };
+      
+      // register shifts
+      `PARC_INST_MSG_SLLV    :cs={ y,  n,    br_none, pm_p,   am_rdat, y, bm_rdat, y, alu_sll,  md_x,    n, mdm_x, em_alu, nr,  ml_x, dmm_x,  wm_alu, y,  rd, n   };
+      `PARC_INST_MSG_SRLV    :cs={ y,  n,    br_none, pm_p,   am_rdat, y, bm_rdat, y, alu_srl,  md_x,    n, mdm_x, em_alu, nr,  ml_x, dmm_x,  wm_alu, y,  rd, n   };
+      `PARC_INST_MSG_SRAV    :cs={ y,  n,    br_none, pm_p,   am_rdat, y, bm_rdat, y, alu_sra,  md_x,    n, mdm_x, em_alu, nr,  ml_x, dmm_x,  wm_alu, y,  rd, n   };
+
+
+      
+      // lb, lbu, lh, lhu, sb, sh - memory instructions ---------------------------------------------------
+      // loads
+      `PARC_INST_MSG_LB      :cs={ y,  n,    br_none, pm_p,   am_rdat, y, bm_si,   n, alu_add,  md_x,    n, mdm_x, em_x,   ld,  ml_b, dmm_b,  wm_mem, y,  rt, n   };
+      `PARC_INST_MSG_LBU      :cs={ y,  n,    br_none, pm_p,   am_rdat, y, bm_si,   n, alu_add,  md_x,    n, mdm_x, em_x,   ld,  ml_b, dmm_bu,  wm_mem, y,  rt, n   };
+      `PARC_INST_MSG_LH      :cs={ y,  n,    br_none, pm_p,   am_rdat, y, bm_si,   n, alu_add,  md_x,    n, mdm_x, em_x,   ld,  ml_h, dmm_h,  wm_mem, y,  rt, n   };
+      // not sure if this should be si or zi
+      `PARC_INST_MSG_LHU      :cs={ y,  n,    br_none, pm_p,   am_rdat, y, bm_si,   n, alu_add,  md_x,    n, mdm_x, em_x,   ld,  ml_h, dmm_hu,  wm_mem, y,  rt, n   };
+      // stores --------
+      `PARC_INST_MSG_SB      :cs={ y,  n,    br_none, pm_p,   am_rdat, y, bm_si,   y, alu_add,  md_x,    n, mdm_x, em_x,   st,  ml_b, dmm_x,  wm_mem, n,  rx, n   };
+      `PARC_INST_MSG_SH      :cs={ y,  n,    br_none, pm_p,   am_rdat, y, bm_si,   y, alu_add,  md_x,    n, mdm_x, em_x,   st,  ml_h, dmm_x,  wm_mem, n,  rx, n   };
+      // j, jalr - jump instructions
+      // these i'm a little confused on- come back to these
+      `PARC_INST_MSG_JALR     :cs={ y,  y,    br_none, pm_r,   am_0,    y, bm_pc,   n, alu_add,  md_x,    n, mdm_x, em_alu, nr,  ml_x, dmm_x,  wm_alu, y,  rd, n   };
+      `PARC_INST_MSG_J      :cs={ y,  y,    br_none, pm_j,   am_x,    n, bm_x,    n, alu_x,    md_x,    n, mdm_x, em_x,   nr,  ml_x, dmm_x,  wm_x,   n,  rx, n   };
+      
+      // beq, blez, bgtz, bltz, bgez - branch instructions
+      `PARC_INST_MSG_BEQ     :cs={ y,  n,    br_beq,  pm_b,   am_rdat, y, bm_rdat, y, alu_xor,  md_x,    n, mdm_x, em_x,   nr,  ml_x, dmm_x,  wm_x,   n,  rx, n   };
+      `PARC_INST_MSG_BLEZ     :cs={ y,  n,    br_blez,  pm_b,   am_rdat, y, bm_rdat, y, alu_xor,  md_x,    n, mdm_x, em_x,   nr,  ml_x, dmm_x,  wm_x,   n,  rx, n   };
+      `PARC_INST_MSG_BGTZ     :cs={ y,  n,    br_bgtz,  pm_b,   am_rdat, y, bm_rdat, y, alu_xor,  md_x,    n, mdm_x, em_x,   nr,  ml_x, dmm_x,  wm_x,   n,  rx, n   };
+      `PARC_INST_MSG_BLTZ     :cs={ y,  n,    br_bltz,  pm_b,   am_rdat, y, bm_rdat, y, alu_xor,  md_x,    n, mdm_x, em_x,   nr,  ml_x, dmm_x,  wm_x,   n,  rx, n   };
+      `PARC_INST_MSG_BGEZ     :cs={ y,  n,    br_bgez,  pm_b,   am_rdat, y, bm_rdat, y, alu_xor,  md_x,    n, mdm_x, em_x,   nr,  ml_x, dmm_x,  wm_x,   n,  rx, n   };
+      
+      // mul, div, divu, rem, remu
+      //                               j     br       pc      op0      rs op1      rt alu       md       md md     ex      mem  mem   memresp wb      rf      cp0
+      //                           val taken type     muxsel  muxsel   en muxsel   en fn        fn       en muxsel muxsel  rq   len   muxsel  muxsel  wen wa  wen
+      // i think lower is quotient right?
+      `PARC_INST_MSG_DIV    :cs={ y,  n,    br_none,  pm_p,   am_rdat, y, bm_rdat, y, alu_x,  md_div,  y, mdm_l,    em_md, nr,  ml_x, dmm_x,  wm_alu, y,  rd, n   };
+      `PARC_INST_MSG_DIVU    :cs={ y,  n,    br_none,  pm_p,   am_rdat, y, bm_rdat, y, alu_x,  md_divu,  y, mdm_l,    em_md, nr,  ml_x, dmm_x,  wm_alu, y,  rd, n   };
+      `PARC_INST_MSG_MUL    :cs={ y,  n,    br_none,  pm_p,   am_rdat, y, bm_rdat, y, alu_x,  md_mul,  y, mdm_l,    em_md, nr,  ml_x, dmm_x,  wm_alu, y,  rd, n   };
+      `PARC_INST_MSG_REM    :cs={ y,  n,    br_none,  pm_p,   am_rdat, y, bm_rdat, y, alu_x,  md_rem,  y, mdm_u,    em_md, nr,  ml_x, dmm_x,  wm_alu, y,  rd, n   };
+      `PARC_INST_MSG_REMU    :cs={ y,  n,    br_none,  pm_p,   am_rdat, y, bm_rdat, y, alu_x,  md_remu,  y, mdm_u,    em_md, nr,  ml_x, dmm_x,  wm_alu, y,  rd, n   };
     endcase
 
   end
@@ -383,6 +493,17 @@ module parc_CoreCtrl
 
   wire       rs_en_Dhl    = cs[`PARC_INST_MSG_RS_EN];
   wire       rt_en_Dhl    = cs[`PARC_INST_MSG_RT_EN];
+
+// my code
+  // destination matches for bypass decisions (only meaningful if those stages write)
+  wire rs_match_Xhl = rs_en_Dhl && inst_val_Xhl && rf_wen_Xhl && (rs_addr_Dhl == rf_waddr_Xhl) && (rf_waddr_Xhl != 5'd0);
+  wire rs_match_Mhl = rs_en_Dhl && inst_val_Mhl && rf_wen_Mhl && (rs_addr_Dhl == rf_waddr_Mhl) && (rf_waddr_Mhl != 5'd0);
+  wire rs_match_Whl = rs_en_Dhl && inst_val_Whl && rf_wen_Whl && (rs_addr_Dhl == rf_waddr_Whl) && (rf_waddr_Whl != 5'd0);
+
+  wire rt_match_Xhl = rt_en_Dhl && inst_val_Xhl && rf_wen_Xhl && (rt_addr_Dhl == rf_waddr_Xhl) && (rf_waddr_Xhl != 5'd0);
+  wire rt_match_Mhl = rt_en_Dhl && inst_val_Mhl && rf_wen_Mhl && (rt_addr_Dhl == rf_waddr_Mhl) && (rf_waddr_Mhl != 5'd0);
+  wire rt_match_Whl = rt_en_Dhl && inst_val_Whl && rf_wen_Whl && (rt_addr_Dhl == rf_waddr_Whl) && (rf_waddr_Whl != 5'd0);
+// end my code
 
   // Operand Mux Select
 
@@ -414,6 +535,11 @@ module parc_CoreCtrl
   wire       dmemreq_msg_rw_Dhl  = ( cs[`PARC_INST_MSG_MEM_REQ] == st );
   wire [1:0] dmemreq_msg_len_Dhl = cs[`PARC_INST_MSG_MEM_LEN];
   wire       dmemreq_val_Dhl     = ( cs[`PARC_INST_MSG_MEM_REQ] != nr );
+
+// my code
+  // is this instruction a load? (used for load-use stalling and X-stage bypass legality)
+  wire is_load_Dhl = ( cs[`PARC_INST_MSG_MEM_REQ] == ld );
+// end my code
 
   // Memory response mux select
 
@@ -451,31 +577,68 @@ module parc_CoreCtrl
   // Stall for data hazards if either of the operand read addresses are
   // the same as the write addresses of instruction later in the pipeline
 
-  wire stall_hazard_Dhl   = inst_val_Dhl && (
-                            ( rs_en_Dhl && inst_val_Xhl && rf_wen_Xhl
-                              && ( rs_addr_Dhl == rf_waddr_Xhl )
-                              && ( rf_waddr_Xhl != 5'd0 ) )
-                         || ( rs_en_Dhl && inst_val_Mhl && rf_wen_Mhl
-                              && ( rs_addr_Dhl == rf_waddr_Mhl )
-                              && ( rf_waddr_Mhl != 5'd0 ) )
-                         || ( rs_en_Dhl && inst_val_Whl && rf_wen_Whl
-                              && ( rs_addr_Dhl == rf_waddr_Whl )
-                              && ( rf_waddr_Whl != 5'd0 ) )
-                         || ( rt_en_Dhl && inst_val_Xhl && rf_wen_Xhl
-                              && ( rt_addr_Dhl == rf_waddr_Xhl )
-                              && ( rf_waddr_Xhl != 5'd0 ) )
-                         || ( rt_en_Dhl && inst_val_Mhl && rf_wen_Mhl
-                              && ( rt_addr_Dhl == rf_waddr_Mhl )
-                              && ( rf_waddr_Mhl != 5'd0 ) )
-                         || ( rt_en_Dhl && inst_val_Whl && rf_wen_Whl
-                              && ( rt_addr_Dhl == rf_waddr_Whl )
-                              && ( rf_waddr_Whl != 5'd0 ) ) );
+  // wire stall_hazard_Dhl   = inst_val_Dhl && (
+  //                           ( rs_en_Dhl && inst_val_Xhl && rf_wen_Xhl
+  //                             && ( rs_addr_Dhl == rf_waddr_Xhl )
+  //                             && ( rf_waddr_Xhl != 5'd0 ) )
+  //                        || ( rs_en_Dhl && inst_val_Mhl && rf_wen_Mhl
+  //                             && ( rs_addr_Dhl == rf_waddr_Mhl )
+  //                             && ( rf_waddr_Mhl != 5'd0 ) )
+  //                        || ( rs_en_Dhl && inst_val_Whl && rf_wen_Whl
+  //                             && ( rs_addr_Dhl == rf_waddr_Whl )
+  //                             && ( rf_waddr_Whl != 5'd0 ) )
+  //                        || ( rt_en_Dhl && inst_val_Xhl && rf_wen_Xhl
+  //                             && ( rt_addr_Dhl == rf_waddr_Xhl )
+  //                             && ( rf_waddr_Xhl != 5'd0 ) )
+  //                        || ( rt_en_Dhl && inst_val_Mhl && rf_wen_Mhl
+  //                             && ( rt_addr_Dhl == rf_waddr_Mhl )
+  //                             && ( rf_waddr_Mhl != 5'd0 ) )
+  //                        || ( rt_en_Dhl && inst_val_Whl && rf_wen_Whl
+  //                             && ( rt_addr_Dhl == rf_waddr_Whl )
+  //                             && ( rf_waddr_Whl != 5'd0 ) ) );
+
+// my code; replace the commented out block above
+  // stall only for load-use hazard:
+  // if the instruction in X is a load, its value isnt ready to forward to D in time
+  wire stall_loaduse_Dhl = inst_val_Dhl && inst_val_Xhl && is_load_Xhl && rf_wen_Xhl
+                        && ( ( rs_en_Dhl && ( rs_addr_Dhl == rf_waddr_Xhl ) && ( rf_waddr_Xhl != 5'd0 ) )
+                          || ( rt_en_Dhl && ( rt_addr_Dhl == rf_waddr_Xhl ) && ( rf_waddr_Xhl != 5'd0 ) ) );
+// end my code
+
+
+// my code
+  // bypass mux select outputs (priority X then M then W, else no bypass)
+  // 00 = no bypass (use regfile)
+  // 01 = forward from X (if not a load)
+  // 10 = forward from M
+  // 11 = forward from W
+  wire rs_match_Xhl_fwd = rs_match_Xhl && !is_load_Xhl;
+  wire rt_match_Xhl_fwd = rt_match_Xhl && !is_load_Xhl;
+  assign rs_byp_mux_sel_Dhl
+    = rs_match_Xhl_fwd ? 2'b01
+    : rs_match_Mhl ? 2'b10
+    : rs_match_Whl ? 2'b11
+    :               2'b00;
+
+  assign rt_byp_mux_sel_Dhl
+    = rt_match_Xhl_fwd ? 2'b01
+    : rt_match_Mhl ? 2'b10
+    : rt_match_Whl ? 2'b11
+    :               2'b00;
+
 
   // Aggregate Stall Signal
 
+  // assign stall_Dhl = ( stall_Xhl
+  //                 ||   stall_muldiv_Dhl
+  //                 ||   stall_hazard_Dhl );
+
+  // replace above
   assign stall_Dhl = ( stall_Xhl
-                  ||   stall_muldiv_Dhl
-                  ||   stall_hazard_Dhl );
+                ||   stall_muldiv_Dhl
+                ||   stall_loaduse_Dhl );
+// end my code
+
 
   // Next bubble bit
 
@@ -507,6 +670,9 @@ module parc_CoreCtrl
 
   reg        bubble_Xhl;
 
+  reg is_load_Xhl; // my code
+
+
   // Pipeline Controls
 
   always @ ( posedge clk ) begin
@@ -532,6 +698,9 @@ module parc_CoreCtrl
       cp0_addr_Xhl         <= cp0_addr_Dhl;
 
       bubble_Xhl           <= bubble_next_Dhl;
+
+      is_load_Xhl         <= is_load_Dhl; // my code
+
     end
 
   end
@@ -557,17 +726,33 @@ module parc_CoreCtrl
 
   // Branch Conditions
 
-  wire bne_resolve_Xhl  = ~branch_cond_eq_Xhl;
+//my code
+  // Resolve Branch (all branch types)
 
-  // Resolve Branch
+  wire beq_taken_Xhl  = ( br_sel_Xhl == br_beq  ) &&  branch_cond_eq_Xhl;
+  wire bne_taken_Xhl  = ( br_sel_Xhl == br_bne  ) && ~branch_cond_eq_Xhl;
 
-  wire bne_taken_Xhl  = ( ( br_sel_Xhl == br_bne ) && bne_resolve_Xhl );
+  wire blez_taken_Xhl = ( br_sel_Xhl == br_blez ) &&
+                        ( branch_cond_neg_Xhl || branch_cond_zero_Xhl );
+
+  wire bgtz_taken_Xhl = ( br_sel_Xhl == br_bgtz ) &&
+                        ( ~branch_cond_neg_Xhl && ~branch_cond_zero_Xhl );
+
+  wire bltz_taken_Xhl = ( br_sel_Xhl == br_bltz ) &&  branch_cond_neg_Xhl;
+
+  wire bgez_taken_Xhl = ( br_sel_Xhl == br_bgez ) && ~branch_cond_neg_Xhl;
 
   wire any_br_taken_Xhl
-    = ( bne_taken_Xhl
-      );
+    = beq_taken_Xhl
+   || bne_taken_Xhl
+   || blez_taken_Xhl
+   || bgtz_taken_Xhl
+   || bltz_taken_Xhl
+   || bgez_taken_Xhl;
 
   wire brj_taken_Xhl = ( inst_val_Xhl && any_br_taken_Xhl );
+// end my code
+
 
   // Dummy Squash Signal
 
