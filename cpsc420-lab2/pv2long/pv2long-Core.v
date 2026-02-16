@@ -54,6 +54,12 @@ module parc_Core
   wire  [1:0] pc_mux_sel_Phl;
   wire  [1:0] op0_mux_sel_Dhl;
   wire  [2:0] op1_mux_sel_Dhl;
+
+//my code
+  wire  [1:0] rs_byp_mux_sel_Dhl;
+  wire  [1:0] rt_byp_mux_sel_Dhl;
+//end my code
+
   wire [31:0] inst_Dhl;
   wire  [3:0] alu_fn_Xhl;
   wire  [2:0] muldivreq_msg_fn_Xhl;
@@ -151,6 +157,10 @@ module parc_Core
     .pc_mux_sel_Phl         (pc_mux_sel_Phl),
     .op0_mux_sel_Dhl        (op0_mux_sel_Dhl),
     .op1_mux_sel_Dhl        (op1_mux_sel_Dhl),
+    
+    .rs_byp_mux_sel_Dhl     (rs_byp_mux_sel_Dhl), // my code
+    .rt_byp_mux_sel_Dhl     (rt_byp_mux_sel_Dhl),
+
     .inst_Dhl               (inst_Dhl),
     .alu_fn_Xhl             (alu_fn_Xhl),
     .muldivreq_msg_fn_Xhl   (muldivreq_msg_fn_Xhl),
@@ -208,6 +218,10 @@ module parc_Core
     .pc_mux_sel_Phl          (pc_mux_sel_Phl),
     .op0_mux_sel_Dhl         (op0_mux_sel_Dhl),
     .op1_mux_sel_Dhl         (op1_mux_sel_Dhl),
+
+    .rs_byp_mux_sel_Dhl     (rs_byp_mux_sel_Dhl), // my code
+    .rt_byp_mux_sel_Dhl     (rt_byp_mux_sel_Dhl),
+
     .inst_Dhl                (inst_Dhl),
     .alu_fn_Xhl              (alu_fn_Xhl),
     .muldivreq_msg_fn_Xhl    (muldivreq_msg_fn_Xhl),

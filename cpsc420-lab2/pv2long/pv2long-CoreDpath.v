@@ -30,6 +30,17 @@ module parc_CoreDpath
   input   [1:0] pc_mux_sel_Phl,
   input   [1:0] op0_mux_sel_Dhl,
   input   [2:0] op1_mux_sel_Dhl,
+
+  // my code
+  // Bypass mux selects (ctrl->dpath)
+  // 00 = no bypass (use regfile)
+  // 01 = forward from X
+  // 10 = forward from M
+  // 11 = forward from W
+  input  [1:0] rs_byp_mux_sel_Dhl,
+  input  [1:0] rt_byp_mux_sel_Dhl,
+  // end my code
+
   input  [31:0] inst_Dhl,
   input   [3:0] alu_fn_Xhl,
   input   [2:0] muldivreq_msg_fn_Xhl,
@@ -161,11 +172,36 @@ module parc_CoreDpath
   wire [ 4:0] rf_raddr1_Dhl = inst_rt_Dhl;
   wire [31:0] rf_rdata1_Dhl;
 
+// my code
+  // Bypassing (decode)
+  
+  // X: result computed in execute for instr currently in X
+  // M: value selected for WB at end of M (either ALU/muldiv or load data)
+  // W:value in W stage
+  wire [31:0] fwd_X_Dhl = execute_mux_out_Xhl;
+  wire [31:0] fwd_M_Dhl = wb_mux_out_Mhl;
+  wire [31:0] fwd_W_Dhl = wb_mux_out_Whl;
+
+  wire [31:0] rf_rdata0_byp_Dhl
+    = ( rs_byp_mux_sel_Dhl == 2'b00 ) ? rf_rdata0_Dhl
+    : ( rs_byp_mux_sel_Dhl == 2'b01 ) ? fwd_X_Dhl
+    : ( rs_byp_mux_sel_Dhl == 2'b10 ) ? fwd_M_Dhl
+    : ( rs_byp_mux_sel_Dhl == 2'b11 ) ? fwd_W_Dhl
+    :                                   32'bx;
+
+  wire [31:0] rf_rdata1_byp_Dhl
+    = ( rt_byp_mux_sel_Dhl == 2'b00 ) ? rf_rdata1_Dhl
+    : ( rt_byp_mux_sel_Dhl == 2'b01 ) ? fwd_X_Dhl
+    : ( rt_byp_mux_sel_Dhl == 2'b10 ) ? fwd_M_Dhl
+    : ( rt_byp_mux_sel_Dhl == 2'b11 ) ? fwd_W_Dhl
+    :                                   32'bx;
+// end my code
+
   // Jump reg address
 
   wire [31:0] jumpreg_targ_Dhl;
 
-  assign jumpreg_targ_Dhl  = rf_rdata0_Dhl;
+  assign jumpreg_targ_Dhl  = rf_rdata0_byp_Dhl; // my code; changed from rf_rdata0_Dhl to rf_rdata0_byp_Dhl
 
   // Zero and sign extension immediate
 
@@ -184,7 +220,7 @@ module parc_CoreDpath
   // Operand 0 mux
 
   wire [31:0] op0_mux_out_Dhl
-    = ( op0_mux_sel_Dhl == 2'd0 ) ? rf_rdata0_Dhl
+    = ( op0_mux_sel_Dhl == 2'd0 ) ? rf_rdata0_byp_Dhl // my code; changed from rf_rdata0_Dhl to rf_rdata0_byp_Dhl
     : ( op0_mux_sel_Dhl == 2'd1 ) ? shamt_Dhl
     : ( op0_mux_sel_Dhl == 2'd2 ) ? const16
     : ( op0_mux_sel_Dhl == 2'd3 ) ? const0
@@ -193,7 +229,7 @@ module parc_CoreDpath
   // Operand 1 mux
 
   wire [31:0] op1_mux_out_Dhl
-    = ( op1_mux_sel_Dhl == 3'd0 ) ? rf_rdata1_Dhl
+    = ( op1_mux_sel_Dhl == 3'd0 ) ? rf_rdata1_byp_Dhl // my code; changed from rf_rdata1_Dhl to rf_rdata1_byp_Dhl
     : ( op1_mux_sel_Dhl == 3'd1 ) ? imm_zext_Dhl
     : ( op1_mux_sel_Dhl == 3'd2 ) ? imm_sext_Dhl
     : ( op1_mux_sel_Dhl == 3'd3 ) ? pc_plus4_Dhl
@@ -202,7 +238,7 @@ module parc_CoreDpath
 
   // wdata with bypassing
 
-  wire [31:0] wdata_Dhl = rf_rdata1_Dhl;
+  wire [31:0] wdata_Dhl = rf_rdata1_byp_Dhl; // my code; changed from rf_rdata1_Dhl to rf_rdata1_byp_Dhl
 
   //----------------------------------------------------------------------
   // X <- D
@@ -411,21 +447,27 @@ module parc_CoreDpath
 
   // Multiplier/Divider
 
-  imuldiv_IntMulDivIterative imuldiv
+  parc_CoreDpathPipeMulDiv muldiv
   (
     .clk                   (clk),
     .reset                 (reset),
+
     .muldivreq_msg_fn      (muldivreq_msg_fn_Xhl),
     .muldivreq_msg_a       (op0_mux_out_Xhl),
     .muldivreq_msg_b       (op1_mux_out_Xhl),
     .muldivreq_val         (muldivreq_val),
     .muldivreq_rdy         (muldivreq_rdy),
-    //Note that this probably will come out in a different pipeline stage than X
+
     .muldivresp_msg_result (muldivresp_msg_result_Xhl),
     .muldivresp_val        (muldivresp_val),
-    .muldivresp_rdy        (muldivresp_rdy)
-    //Note these stall signals should be hooked to something!!!
+    .muldivresp_rdy        (muldivresp_rdy),
+
+    .stall_Xhl             (stall_Xhl),
+    .stall_Mhl             (stall_Mhl),
+    .stall_X2hl            (stall_X2hl),
+    .stall_X3hl            (stall_X3hl)
   );
+
 
 endmodule
 
