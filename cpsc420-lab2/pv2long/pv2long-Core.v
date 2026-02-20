@@ -62,13 +62,20 @@ module parc_Core
 
   wire [31:0] inst_Dhl;
   wire  [3:0] alu_fn_Xhl;
-  wire  [2:0] muldivreq_msg_fn_Xhl;
+  // wire  [2:0] muldivreq_msg_fn_Xhl;
+  wire  [2:0] muldivreq_msg_fn_Dhl; // changed this to D
   wire        muldivreq_val;
   wire        muldivreq_rdy;
   wire        muldivresp_val;
   wire        muldivresp_rdy;
-  wire        muldiv_mux_sel_Xhl;
-  wire        execute_mux_sel_Xhl;
+  // we don't need these anymore because execute mux happens in X3
+  // wire        muldiv_mux_sel_Xhl; 
+  // wire        execute_mux_sel_Xhl;
+
+  // my code
+  wire muldiv_mux_sel_X3hl;
+  wire execute_mux_sel_X3hl;
+  // end my code
   wire  [2:0] dmemresp_mux_sel_Mhl;
   wire        dmemresp_queue_en_Mhl;
   wire        dmemresp_queue_val_Mhl;
@@ -80,6 +87,11 @@ module parc_Core
   wire        stall_Xhl;
   wire        stall_Mhl;
   wire        stall_Whl;
+
+  // i added these two
+  wire stall_X2hl;
+  wire stall_X3hl;
+
 
   wire        branch_cond_eq_Xhl;
   wire        branch_cond_zero_Xhl;
@@ -163,13 +175,20 @@ module parc_Core
 
     .inst_Dhl               (inst_Dhl),
     .alu_fn_Xhl             (alu_fn_Xhl),
-    .muldivreq_msg_fn_Xhl   (muldivreq_msg_fn_Xhl),
+    // .muldivreq_msg_fn_Xhl   (muldivreq_msg_fn_Xhl),
+    .muldivreq_msg_fn_Dhl   (muldivreq_msg_fn_Dhl), // changed above to D
     .muldivreq_val          (muldivreq_val),
     .muldivreq_rdy          (muldivreq_rdy),
     .muldivresp_val         (muldivresp_val),
     .muldivresp_rdy         (muldivresp_rdy),
-    .muldiv_mux_sel_Xhl     (muldiv_mux_sel_Xhl),
-    .execute_mux_sel_Xhl    (execute_mux_sel_Xhl),
+    // same thing
+    // .muldiv_mux_sel_Xhl     (muldiv_mux_sel_Xhl),
+    // .execute_mux_sel_Xhl    (execute_mux_sel_Xhl),
+
+    // my code
+    .muldiv_mux_sel_X3hl     (muldiv_mux_sel_X3hl),
+    .execute_mux_sel_X3hl    (execute_mux_sel_X3hl),
+    // end my code
     .dmemresp_mux_sel_Mhl   (dmemresp_mux_sel_Mhl),
     .dmemresp_queue_en_Mhl  (dmemresp_queue_en_Mhl),
     .dmemresp_queue_val_Mhl (dmemresp_queue_val_Mhl),
@@ -181,6 +200,11 @@ module parc_Core
     .stall_Xhl              (stall_Xhl),
     .stall_Mhl              (stall_Mhl),
     .stall_Whl              (stall_Whl),
+
+    // i added these two
+    .stall_X2hl( stall_X2hl ),
+    .stall_X3hl( stall_X3hl ),
+
 
     // Control Signals (dpath->ctrl)
 
@@ -224,13 +248,20 @@ module parc_Core
 
     .inst_Dhl                (inst_Dhl),
     .alu_fn_Xhl              (alu_fn_Xhl),
-    .muldivreq_msg_fn_Xhl    (muldivreq_msg_fn_Xhl),
+    // .muldivreq_msg_fn_Xhl    (muldivreq_msg_fn_Xhl),
+    .muldivreq_msg_fn_Dhl    (muldivreq_msg_fn_Dhl), // changed above to D
     .muldivreq_val           (muldivreq_val),
     .muldivreq_rdy           (muldivreq_rdy),
     .muldivresp_val          (muldivresp_val),
     .muldivresp_rdy          (muldivresp_rdy),
-    .muldiv_mux_sel_Xhl      (muldiv_mux_sel_Xhl),
-    .execute_mux_sel_Xhl     (execute_mux_sel_Xhl),
+    // same thing
+    // .muldiv_mux_sel_Xhl      (muldiv_mux_sel_Xhl),
+    // .execute_mux_sel_Xhl     (execute_mux_sel_Xhl),
+
+    // my code
+    .muldiv_mux_sel_X3hl     (muldiv_mux_sel_X3hl),
+    .execute_mux_sel_X3hl    (execute_mux_sel_X3hl),
+    // end my code
     .dmemresp_mux_sel_Mhl    (dmemresp_mux_sel_Mhl),
     .dmemresp_queue_en_Mhl   (dmemresp_queue_en_Mhl),
     .dmemresp_queue_val_Mhl  (dmemresp_queue_val_Mhl),
@@ -242,6 +273,10 @@ module parc_Core
     .stall_Xhl               (stall_Xhl),
     .stall_Mhl               (stall_Mhl),
     .stall_Whl               (stall_Whl),
+
+    // i added these two
+    .stall_X2hl( stall_X2hl ),
+    .stall_X3hl( stall_X3hl ),
 
     // Control Signals (dpath->ctrl)
 

@@ -34,29 +34,43 @@ module parc_CoreCtrl
   output [1:0]     rt_byp_mux_sel_Dhl,
 //end my code
 
-
   output  [1:0]     pc_mux_sel_Phl,
   output  [1:0]     op0_mux_sel_Dhl,
   output  [2:0]     op1_mux_sel_Dhl,
   output [31:0]     inst_Dhl,
+
   output reg [3:0]  alu_fn_Xhl,
-  output reg [2:0]  muldivreq_msg_fn_Xhl,
+
+  // muldiv from decode
+  // output reg [2:0]  muldivreq_msg_fn_Xhl,
+  output [2:0]  muldivreq_msg_fn_Dhl, // changed to D, removed the 'reg'
   output            muldivreq_val,
   input             muldivreq_rdy,
   input             muldivresp_val,
   output            muldivresp_rdy,
-  output reg        muldiv_mux_sel_Xhl,
-  output reg        execute_mux_sel_Xhl,
+
+  // output reg        muldiv_mux_sel_Xhl,
+  // output reg        execute_mux_sel_Xhl,
+  // replaced with this:
+  output reg        muldiv_mux_sel_X3hl,
+  output reg        execute_mux_sel_X3hl,
+  // end my code
+
   output reg [2:0]  dmemresp_mux_sel_Mhl,
   output            dmemresp_queue_en_Mhl,
   output reg        dmemresp_queue_val_Mhl,
   output reg        wb_mux_sel_Mhl,
   output            rf_wen_out_Whl,
   output reg [4:0]  rf_waddr_Whl,
+
   output            stall_Fhl,
   output            stall_Dhl,
   output            stall_Xhl,
   output wire       stall_Mhl,
+  // i added these
+  output wire       stall_X2hl,
+  output wire       stall_X3hl,
+  // end my code
   output wire       stall_Whl,
 
   // Control Signals (dpath->ctrl)
@@ -69,6 +83,19 @@ module parc_CoreCtrl
   // CP0 Status
   output reg [31:0] cp0_status
 );
+
+  // my code --
+  // X2 registers
+  reg rf_wen_X2hl;
+  reg [4:0] rf_waddr_X2hl;
+  reg execute_mux_sel_X2hl;
+  reg muldiv_mux_sel_X2hl;
+
+  // X3 registers
+  reg rf_wen_X3hl;
+  reg [4:0] rf_waddr_X3hl;
+  // end my code
+
 
   //----------------------------------------------------------------------
   // PC Stage: Instruction Memory Request
@@ -395,7 +422,7 @@ module parc_CoreCtrl
       // addu takes in rt (two register inputs vs one), chooses r source value for op0 for both, but addiu takes bm_signed immediate instead of rt as a second input
       `PARC_INST_MSG_ADDU    :cs={ y,  n,    br_none, pm_p,   am_rdat, y, bm_rdat, y, alu_add,  md_x,    n, mdm_x, em_alu, nr,  ml_x, dmm_x,  wm_alu, y,  rd, n   };
 
-      `PARC_INST_MSG_LW      :cs={ y,  n,    br_none, pm_p,   am_rdat, y, bm_si,   n, alu_add,  md_x,    n, mdm_x, em_x,   ld,  ml_w, dmm_w,  wm_mem, y,  rt, n   };
+      `PARC_INST_MSG_LW      :cs={ y,  n,    br_none, pm_p,   am_rdat, y, bm_si,   n, alu_add,  md_x,    n, mdm_x, em_alu,   ld,  ml_w, dmm_w,  wm_mem, y,  rt, n   };
       `PARC_INST_MSG_SW      :cs={ y,  n,    br_none, pm_p,   am_rdat, y, bm_si,   y, alu_add,  md_x,    n, mdm_x, em_x,   st,  ml_w, dmm_w,  wm_mem, n,  rx, n   };
 
       `PARC_INST_MSG_JAL     :cs={ y,  y,    br_none, pm_j,   am_0,    n, bm_pc,   n, alu_add,  md_x,    n, mdm_x, em_alu, nr,  ml_x, dmm_x,  wm_alu, y,  rL, n   };
@@ -418,9 +445,9 @@ module parc_CoreCtrl
       `PARC_INST_MSG_SLTIU     :cs={ y,  n,    br_none, pm_p,   am_rdat, y, bm_si,   n, alu_ltu,   md_x,    n, mdm_x, em_alu, nr,  ml_x, dmm_x,  wm_alu, y,  rt, n   };
 
       // shifts
-      `PARC_INST_MSG_SLL     :cs={ y,  n,    br_none, pm_p,   am_sh, y, bm_rdat,   y, alu_sll,   md_x,    n, mdm_x, em_alu, nr,  ml_x, dmm_x,  wm_alu, y,  rd, n   };
-      `PARC_INST_MSG_SRL     :cs={ y,  n,    br_none, pm_p,   am_sh, y, bm_rdat,   y, alu_srl,   md_x,    n, mdm_x, em_alu, nr,  ml_x, dmm_x,  wm_alu, y,  rd, n   };
-      `PARC_INST_MSG_SRA     :cs={ y,  n,    br_none, pm_p,   am_sh, y, bm_rdat,   y, alu_sra,   md_x,    n, mdm_x, em_alu, nr,  ml_x, dmm_x,  wm_alu, y,  rd, n   };
+      `PARC_INST_MSG_SLL     :cs={ y,  n,    br_none, pm_p,   am_sh, n, bm_rdat,   y, alu_sll,   md_x,    n, mdm_x, em_alu, nr,  ml_x, dmm_x,  wm_alu, y,  rd, n   };
+      `PARC_INST_MSG_SRL     :cs={ y,  n,    br_none, pm_p,   am_sh, n, bm_rdat,   y, alu_srl,   md_x,    n, mdm_x, em_alu, nr,  ml_x, dmm_x,  wm_alu, y,  rd, n   };
+      `PARC_INST_MSG_SRA     :cs={ y,  n,    br_none, pm_p,   am_sh, n, bm_rdat,   y, alu_sra,   md_x,    n, mdm_x, em_alu, nr,  ml_x, dmm_x,  wm_alu, y,  rd, n   };
       
 
 
@@ -444,11 +471,11 @@ module parc_CoreCtrl
       
       // lb, lbu, lh, lhu, sb, sh - memory instructions ---------------------------------------------------
       // loads
-      `PARC_INST_MSG_LB      :cs={ y,  n,    br_none, pm_p,   am_rdat, y, bm_si,   n, alu_add,  md_x,    n, mdm_x, em_x,   ld,  ml_b, dmm_b,  wm_mem, y,  rt, n   };
-      `PARC_INST_MSG_LBU      :cs={ y,  n,    br_none, pm_p,   am_rdat, y, bm_si,   n, alu_add,  md_x,    n, mdm_x, em_x,   ld,  ml_b, dmm_bu,  wm_mem, y,  rt, n   };
-      `PARC_INST_MSG_LH      :cs={ y,  n,    br_none, pm_p,   am_rdat, y, bm_si,   n, alu_add,  md_x,    n, mdm_x, em_x,   ld,  ml_h, dmm_h,  wm_mem, y,  rt, n   };
+      `PARC_INST_MSG_LB      :cs={ y,  n,    br_none, pm_p,   am_rdat, y, bm_si,   n, alu_add,  md_x,    n, mdm_x, em_alu,   ld,  ml_b, dmm_b,  wm_mem, y,  rt, n   };
+      `PARC_INST_MSG_LBU      :cs={ y,  n,    br_none, pm_p,   am_rdat, y, bm_si,   n, alu_add,  md_x,    n, mdm_x, em_alu,   ld,  ml_b, dmm_bu,  wm_mem, y,  rt, n   };
+      `PARC_INST_MSG_LH      :cs={ y,  n,    br_none, pm_p,   am_rdat, y, bm_si,   n, alu_add,  md_x,    n, mdm_x, em_alu,   ld,  ml_h, dmm_h,  wm_mem, y,  rt, n   };
       // not sure if this should be si or zi
-      `PARC_INST_MSG_LHU      :cs={ y,  n,    br_none, pm_p,   am_rdat, y, bm_si,   n, alu_add,  md_x,    n, mdm_x, em_x,   ld,  ml_h, dmm_hu,  wm_mem, y,  rt, n   };
+      `PARC_INST_MSG_LHU      :cs={ y,  n,    br_none, pm_p,   am_rdat, y, bm_si,   n, alu_add,  md_x,    n, mdm_x, em_alu,   ld,  ml_h, dmm_hu,  wm_mem, y,  rt, n   };
       // stores --------
       `PARC_INST_MSG_SB      :cs={ y,  n,    br_none, pm_p,   am_rdat, y, bm_si,   y, alu_add,  md_x,    n, mdm_x, em_x,   st,  ml_b, dmm_x,  wm_mem, n,  rx, n   };
       `PARC_INST_MSG_SH      :cs={ y,  n,    br_none, pm_p,   am_rdat, y, bm_si,   y, alu_add,  md_x,    n, mdm_x, em_x,   st,  ml_h, dmm_x,  wm_mem, n,  rx, n   };
@@ -459,10 +486,10 @@ module parc_CoreCtrl
       
       // beq, blez, bgtz, bltz, bgez - branch instructions
       `PARC_INST_MSG_BEQ     :cs={ y,  n,    br_beq,  pm_b,   am_rdat, y, bm_rdat, y, alu_xor,  md_x,    n, mdm_x, em_x,   nr,  ml_x, dmm_x,  wm_x,   n,  rx, n   };
-      `PARC_INST_MSG_BLEZ     :cs={ y,  n,    br_blez,  pm_b,   am_rdat, y, bm_rdat, y, alu_xor,  md_x,    n, mdm_x, em_x,   nr,  ml_x, dmm_x,  wm_x,   n,  rx, n   };
-      `PARC_INST_MSG_BGTZ     :cs={ y,  n,    br_bgtz,  pm_b,   am_rdat, y, bm_rdat, y, alu_xor,  md_x,    n, mdm_x, em_x,   nr,  ml_x, dmm_x,  wm_x,   n,  rx, n   };
-      `PARC_INST_MSG_BLTZ     :cs={ y,  n,    br_bltz,  pm_b,   am_rdat, y, bm_rdat, y, alu_xor,  md_x,    n, mdm_x, em_x,   nr,  ml_x, dmm_x,  wm_x,   n,  rx, n   };
-      `PARC_INST_MSG_BGEZ     :cs={ y,  n,    br_bgez,  pm_b,   am_rdat, y, bm_rdat, y, alu_xor,  md_x,    n, mdm_x, em_x,   nr,  ml_x, dmm_x,  wm_x,   n,  rx, n   };
+      `PARC_INST_MSG_BLEZ     :cs={ y,  n,    br_blez,  pm_b,   am_rdat, y, bm_0, n, alu_xor,  md_x,    n, mdm_x, em_x,   nr,  ml_x, dmm_x,  wm_x,   n,  rx, n   };
+      `PARC_INST_MSG_BGTZ     :cs={ y,  n,    br_bgtz,  pm_b,   am_rdat, y, bm_0, n, alu_xor,  md_x,    n, mdm_x, em_x,   nr,  ml_x, dmm_x,  wm_x,   n,  rx, n   };
+      `PARC_INST_MSG_BLTZ     :cs={ y,  n,    br_bltz,  pm_b,   am_rdat, y, bm_0, n, alu_xor,  md_x,    n, mdm_x, em_x,   nr,  ml_x, dmm_x,  wm_x,   n,  rx, n   };
+      `PARC_INST_MSG_BGEZ     :cs={ y,  n,    br_bgez,  pm_b,   am_rdat, y, bm_0, n, alu_xor,  md_x,    n, mdm_x, em_x,   nr,  ml_x, dmm_x,  wm_x,   n,  rx, n   };
       
       // mul, div, divu, rem, remu
       //                               j     br       pc      op0      rs op1      rt alu       md       md md     ex      mem  mem   memresp wb      rf      cp0
@@ -496,13 +523,55 @@ module parc_CoreCtrl
 
 // my code
   // destination matches for bypass decisions (only meaningful if those stages write)
-  wire rs_match_Xhl = rs_en_Dhl && inst_val_Xhl && rf_wen_Xhl && (rs_addr_Dhl == rf_waddr_Xhl) && (rf_waddr_Xhl != 5'd0);
+  
+  // celeste wrote
+
+
+  // wire rs_match_Xhl = rs_en_Dhl && inst_val_Xhl && rf_wen_Xhl && (rs_addr_Dhl == rf_waddr_Xhl) && (rf_waddr_Xhl != 5'd0);
+  // wire rs_match_Mhl = rs_en_Dhl && inst_val_Mhl && rf_wen_Mhl && (rs_addr_Dhl == rf_waddr_Mhl) && (rf_waddr_Mhl != 5'd0);
+  wire rs_match_Xhl  = rs_en_Dhl && inst_val_Xhl && rf_wen_Xhl && (rs_addr_Dhl == rf_waddr_Xhl) && (rf_waddr_Xhl != 5'd0);
   wire rs_match_Mhl = rs_en_Dhl && inst_val_Mhl && rf_wen_Mhl && (rs_addr_Dhl == rf_waddr_Mhl) && (rf_waddr_Mhl != 5'd0);
+
+  // celeste added these
+  wire rs_match_X2hl = rs_en_Dhl && inst_val_X2hl && rf_wen_X2hl && (rs_addr_Dhl == rf_waddr_X2hl) && (rf_waddr_X2hl != 5'd0);
+  wire rs_match_X3hl = rs_en_Dhl && inst_val_X3hl && rf_wen_X3hl && (rs_addr_Dhl == rf_waddr_X3hl) && (rf_waddr_X3hl != 5'd0);
+  // end celeste added
+
   wire rs_match_Whl = rs_en_Dhl && inst_val_Whl && rf_wen_Whl && (rs_addr_Dhl == rf_waddr_Whl) && (rf_waddr_Whl != 5'd0);
 
   wire rt_match_Xhl = rt_en_Dhl && inst_val_Xhl && rf_wen_Xhl && (rt_addr_Dhl == rf_waddr_Xhl) && (rf_waddr_Xhl != 5'd0);
   wire rt_match_Mhl = rt_en_Dhl && inst_val_Mhl && rf_wen_Mhl && (rt_addr_Dhl == rf_waddr_Mhl) && (rf_waddr_Mhl != 5'd0);
+  // celeste added these
+  wire rt_match_X2hl = rt_en_Dhl && inst_val_X2hl && rf_wen_X2hl && (rt_addr_Dhl == rf_waddr_X2hl) && (rf_waddr_X2hl != 5'd0);
+  wire rt_match_X3hl = rt_en_Dhl && inst_val_X3hl && rf_wen_X3hl && (rt_addr_Dhl == rf_waddr_X3hl) && (rf_waddr_X3hl != 5'd0);
+  // end celeste added
   wire rt_match_Whl = rt_en_Dhl && inst_val_Whl && rf_wen_Whl && (rt_addr_Dhl == rf_waddr_Whl) && (rf_waddr_Whl != 5'd0);
+
+
+  // celeste code
+  wire rs_match_Xhl_fwd = rs_match_Xhl && !is_load_Xhl && !is_muldiv_Xhl;
+  wire rt_match_Xhl_fwd = rt_match_Xhl && !is_load_Xhl && !is_muldiv_Xhl;
+
+  wire rs_match_Mhl_fwd = rs_match_Mhl && !is_muldiv_Mhl;
+  wire rt_match_Mhl_fwd = rt_match_Mhl && !is_muldiv_Mhl;
+
+  // 00 regfile, 01 X, 10 M, 11 W
+  assign rs_byp_mux_sel_Dhl
+    = rs_match_Xhl_fwd ? 2'b01
+    : rs_match_Mhl_fwd ? 2'b10
+    : rs_match_Whl ? 2'b11
+    : 2'b00;
+
+  assign rt_byp_mux_sel_Dhl
+    = rt_match_Xhl_fwd ? 2'b01
+    : rt_match_Mhl_fwd ? 2'b10
+    : rt_match_Whl ? 2'b11
+    : 2'b00;
+
+
+  // end ecelets code
+
+
 // end my code
 
   // Operand Mux Select
@@ -516,11 +585,15 @@ module parc_CoreCtrl
 
   // Muldiv Function
 
-  wire [2:0] muldivreq_msg_fn_Dhl = cs[`PARC_INST_MSG_MULDIV_FN];
+  // wire [2:0] muldivreq_msg_fn_Dhl = cs[`PARC_INST_MSG_MULDIV_FN];
+  assign muldivreq_msg_fn_Dhl = cs[`PARC_INST_MSG_MULDIV_FN]; // it's an input now so can't define it
 
   // Muldiv Controls
 
   wire muldivreq_val_Dhl = cs[`PARC_INST_MSG_MULDIV_EN];
+
+  // i added this line
+  wire is_muldiv_Dhl = muldivreq_val_Dhl;
 
   // Muldiv Mux Select
 
@@ -528,6 +601,7 @@ module parc_CoreCtrl
 
   // Execute Mux Select
 
+  // this should always be set to the alu output.
   wire execute_mux_sel_Dhl = cs[`PARC_INST_MSG_EX_SEL];
 
   // Memory Controls
@@ -572,7 +646,8 @@ module parc_CoreCtrl
 
   // Stall in D if muldiv unit is not ready and there is a valid request
 
-  wire stall_muldiv_Dhl = ( muldivreq_val_Dhl && inst_val_Dhl && !muldivreq_rdy );
+  // we're no longer stalling
+  // wire stall_muldiv_Dhl = ( muldivreq_val_Dhl && inst_val_Dhl && !muldivreq_rdy );
 
   // Stall for data hazards if either of the operand read addresses are
   // the same as the write addresses of instruction later in the pipeline
@@ -612,20 +687,8 @@ module parc_CoreCtrl
   // 01 = forward from X (if not a load)
   // 10 = forward from M
   // 11 = forward from W
-  wire rs_match_Xhl_fwd = rs_match_Xhl && !is_load_Xhl;
-  wire rt_match_Xhl_fwd = rt_match_Xhl && !is_load_Xhl;
-  assign rs_byp_mux_sel_Dhl
-    = rs_match_Xhl_fwd ? 2'b01
-    : rs_match_Mhl ? 2'b10
-    : rs_match_Whl ? 2'b11
-    :               2'b00;
-
-  assign rt_byp_mux_sel_Dhl
-    = rt_match_Xhl_fwd ? 2'b01
-    : rt_match_Mhl ? 2'b10
-    : rt_match_Whl ? 2'b11
-    :               2'b00;
-
+  // wire rs_match_Xhl_fwd = rs_match_Xhl && !is_load_Xhl;
+  // wire rt_match_Xhl_fwd = rt_match_Xhl && !is_load_Xhl;
 
   // Aggregate Stall Signal
 
@@ -633,11 +696,34 @@ module parc_CoreCtrl
   //                 ||   stall_muldiv_Dhl
   //                 ||   stall_hazard_Dhl );
 
-  // replace above
-  assign stall_Dhl = ( stall_Xhl
-                ||   stall_muldiv_Dhl
-                ||   stall_loaduse_Dhl );
-// end my code
+  // replaced above (my code)
+  wire stall_pre_muldiv_Dhl = stall_Xhl || stall_hazard_Dhl;
+  assign stall_Dhl = ( stall_pre_muldiv_Dhl || stall_muldiv_req_Dhl );
+
+  // stall for x2, x3
+  wire stall_x2x3_hazard_Dhl = inst_val_Dhl &&
+  ( rs_match_X2hl
+  || rs_match_X3hl
+  || rt_match_X2hl
+  || rt_match_X3hl );
+
+
+  wire stall_muldiv_dep_Dhl
+  = inst_val_Dhl &&
+    ( (rs_en_Dhl &&
+        ( (rs_match_Xhl && is_muldiv_Xhl)
+        ||(rs_match_Mhl && is_muldiv_Mhl)
+        ||(rs_match_X2hl && is_muldiv_X2hl)
+        ||(rs_match_X3hl && is_muldiv_X3hl) ))
+     ||
+      (rt_en_Dhl &&
+        ( (rt_match_Xhl && is_muldiv_Xhl)
+        ||(rt_match_Mhl && is_muldiv_Mhl)
+        ||(rt_match_X2hl && is_muldiv_X2hl)
+        ||(rt_match_X3hl && is_muldiv_X3hl) )) );
+
+  wire stall_hazard_Dhl =stall_loaduse_Dhl || stall_x2x3_hazard_Dhl || stall_muldiv_dep_Dhl;
+  // end my code
 
 
   // Next bubble bit
@@ -668,6 +754,12 @@ module parc_CoreCtrl
   reg        cp0_wen_Xhl;
   reg  [4:0] cp0_addr_Xhl;
 
+  // my code
+  reg is_muldiv_Xhl;
+  reg muldiv_mux_sel_Xhl;
+  reg execute_mux_sel_Xhl;
+  reg [2:0] muldivreq_msg_fn_Xhl;
+  // end my code
   reg        bubble_Xhl;
 
   reg is_load_Xhl; // my code
@@ -697,6 +789,8 @@ module parc_CoreCtrl
       cp0_wen_Xhl          <= cp0_wen_Dhl;
       cp0_addr_Xhl         <= cp0_addr_Dhl;
 
+      is_muldiv_Xhl <= is_muldiv_Dhl; // i added this
+
       bubble_Xhl           <= bubble_next_Dhl;
 
       is_load_Xhl         <= is_load_Dhl; // my code
@@ -715,8 +809,19 @@ module parc_CoreCtrl
 
   // Muldiv request
 
-  assign muldivreq_val = muldivreq_val_Xhl && inst_val_Xhl;
-  assign muldivresp_rdy = !stall_Xhl;
+  // assign muldivreq_val = muldivreq_val_Xhl && inst_val_Xhl;
+  // replaced the above line with my code:
+  wire muldivreq_val_Dhl_qual = inst_val_Dhl && !stall_pre_muldiv_Dhl && muldivreq_val_Dhl;
+
+  assign muldivreq_val = muldivreq_val_Dhl_qual;
+
+  wire stall_muldiv_req_Dhl = muldivreq_val_Dhl_qual && !muldivreq_rdy;
+  // end my code
+
+  // assign muldivresp_rdy = !stall_Xhl;
+  // replaced with my code:
+  assign muldivresp_rdy = inst_val_X3hl && is_muldiv_X3hl && !stall_X3hl;
+  // end my code
 
   // Only send a valid dmem request if not stalled
 
@@ -772,7 +877,7 @@ module parc_CoreCtrl
 
   // Aggregate Stall Signal
 
-  assign stall_Xhl = ( stall_Mhl || stall_muldiv_Xhl || stall_imem_Xhl || stall_dmem_Xhl );
+  assign stall_Xhl = ( stall_Mhl || stall_imem_Xhl || stall_dmem_Xhl ); // removed stall_muldiv_Xhl
 
   // Next bubble bit
 
@@ -793,6 +898,12 @@ module parc_CoreCtrl
   reg  [4:0] rf_waddr_Mhl;
   reg        cp0_wen_Mhl;
   reg  [4:0] cp0_addr_Mhl;
+  reg is_muldiv_Mhl;
+
+  // my code
+  reg muldiv_mux_sel_Mhl;
+  reg execute_mux_sel_Mhl;
+  // end my code
 
   reg        bubble_Mhl;
 
@@ -812,6 +923,12 @@ module parc_CoreCtrl
       cp0_addr_Mhl         <= cp0_addr_Xhl;
 
       bubble_Mhl           <= bubble_next_Xhl;
+
+      // my code
+      is_muldiv_Mhl <= is_muldiv_Xhl; // i added this
+      muldiv_mux_sel_Mhl <= muldiv_mux_sel_Xhl;
+      execute_mux_sel_Mhl <= execute_mux_sel_Xhl;
+      // end my code
     end
     dmemreq_val_Mhl <= dmemreq_val;
   end
@@ -841,7 +958,7 @@ module parc_CoreCtrl
 
   // Aggregate Stall Signal
 
-  assign stall_Mhl = ( stall_imem_Mhl || stall_dmem_Mhl );
+  assign stall_Mhl = ( stall_imem_Mhl || stall_dmem_Mhl || stall_X2hl ); // added stall_X2hl
 
   // Next bubble bit
 
@@ -849,6 +966,86 @@ module parc_CoreCtrl
   wire bubble_next_Mhl = ( !bubble_sel_Mhl ) ? bubble_Mhl
                        : ( bubble_sel_Mhl )  ? 1'b1
                        :                       1'bx;
+
+
+  //----------------------------------------------------------------------
+    // X2 <- M (my code)
+  //----------------------------------------------------------------------
+
+  reg cp0_wen_X2hl;
+  reg [4:0] cp0_addr_X2hl;
+  reg bubble_X2hl;
+  reg [31:0] ir_X2hl;
+
+  reg is_muldiv_X2hl;
+
+  always @ ( posedge clk ) begin
+    if ( reset ) begin
+      bubble_X2hl <= 1'b1;
+    end
+    else if ( !stall_X2hl ) begin
+      ir_X2hl <= ir_Mhl;
+      rf_wen_X2hl <= rf_wen_Mhl;
+      rf_waddr_X2hl <= rf_waddr_Mhl;
+      cp0_wen_X2hl <= cp0_wen_Mhl;
+      cp0_addr_X2hl <= cp0_addr_Mhl;
+
+      is_muldiv_X2hl <= is_muldiv_Mhl;
+      muldiv_mux_sel_X2hl <= muldiv_mux_sel_Mhl;
+      execute_mux_sel_X2hl <= execute_mux_sel_Mhl;
+
+      bubble_X2hl <= bubble_next_Mhl;
+    end
+  end
+
+  wire inst_val_X2hl = ( !bubble_X2hl );
+
+  // end my code
+
+  //----------------------------------------------------------------------
+  // X3 <- X2 (my code)
+  //----------------------------------------------------------------------
+
+  reg cp0_wen_X3hl;
+  reg [4:0]  cp0_addr_X3hl;
+  reg bubble_X3hl;
+  reg [31:0] ir_X3hl;
+
+  reg is_muldiv_X3hl;
+
+  always @ ( posedge clk ) begin
+    if ( reset ) begin
+      bubble_X3hl <= 1'b1;
+    end
+    else if ( !stall_X3hl ) begin
+      ir_X3hl <= ir_X2hl;
+      rf_wen_X3hl <= rf_wen_X2hl;
+      rf_waddr_X3hl <= rf_waddr_X2hl;
+      cp0_wen_X3hl <= cp0_wen_X2hl;
+      cp0_addr_X3hl <= cp0_addr_X2hl;
+
+      is_muldiv_X3hl <= is_muldiv_X2hl;
+      muldiv_mux_sel_X3hl <= muldiv_mux_sel_X2hl;
+      execute_mux_sel_X3hl <= execute_mux_sel_X2hl;
+
+      bubble_X3hl <= bubble_X2hl;
+    end
+  end
+
+  wire inst_val_X3hl = ( !bubble_X3hl );
+
+  // end my code
+
+
+  // ADDING THE MULDIV STALL (my code)
+  wire stall_muldiv_X3hl = ( inst_val_X3hl && is_muldiv_X3hl && !muldivresp_val );
+
+  assign stall_X3hl = stall_muldiv_X3hl;
+  assign stall_X2hl = stall_X3hl;
+
+  
+
+  // end my code
 
   //----------------------------------------------------------------------
   // W <- M
@@ -868,15 +1065,24 @@ module parc_CoreCtrl
   always @ ( posedge clk ) begin
     if ( reset ) begin
       bubble_Whl <= 1'b1;
+      dmemresp_queue_val_Mhl <= 1'b0; // i added this
     end
     else if( !stall_Whl ) begin
-      ir_Whl           <= ir_Mhl;
-      rf_wen_Whl       <= rf_wen_Mhl;
-      rf_waddr_Whl     <= rf_waddr_Mhl;
-      cp0_wen_Whl      <= cp0_wen_Mhl;
-      cp0_addr_Whl     <= cp0_addr_Mhl;
+      // ir_Whl           <= ir_Mhl;
+      // rf_wen_Whl       <= rf_wen_Mhl;
+      // rf_waddr_Whl     <= rf_waddr_Mhl;
+      // cp0_wen_Whl      <= cp0_wen_Mhl;
+      // cp0_addr_Whl     <= cp0_addr_Mhl;
 
-      bubble_Whl       <= bubble_next_Mhl;
+      // replaced with (my code)
+      ir_Whl           <= ir_X3hl;
+      rf_wen_Whl       <= rf_wen_X3hl;
+      rf_waddr_Whl     <= rf_waddr_X3hl;
+      cp0_wen_Whl      <= cp0_wen_X3hl;
+      cp0_addr_Whl     <= cp0_addr_X3hl;
+      // end my code
+
+      bubble_Whl       <= bubble_X3hl;
     end
     dmemresp_queue_val_Mhl <= dmemresp_queue_val_next_Mhl;
   end
@@ -1020,4 +1226,3 @@ module parc_CoreCtrl
 endmodule
 
 `endif
-

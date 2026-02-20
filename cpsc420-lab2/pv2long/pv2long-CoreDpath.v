@@ -6,6 +6,7 @@
 `define PARC_CORE_DPATH_V
 
 // `include "imuldiv-IntMulDivIterative.v"
+`include "pv2long-CoreDpathPipeMulDiv.v"
 `include "pv2long-InstMsg.v"
 `include "pv2long-CoreDpathAlu.v"
 `include "pv2long-CoreDpathRegfile.v"
@@ -43,13 +44,14 @@ module parc_CoreDpath
 
   input  [31:0] inst_Dhl,
   input   [3:0] alu_fn_Xhl,
-  input   [2:0] muldivreq_msg_fn_Xhl,
+  // input   [2:0] muldivreq_msg_fn_Xhl,
+  input   [2:0] muldivreq_msg_fn_Dhl, // replaced above with decode stage
   input         muldivreq_val,
   output        muldivreq_rdy,
   output        muldivresp_val,
   input         muldivresp_rdy,
-  input         muldiv_mux_sel_Xhl,
-  input         execute_mux_sel_Xhl,
+  input         muldiv_mux_sel_X3hl,
+  input         execute_mux_sel_X3hl,
   input   [2:0] dmemresp_mux_sel_Mhl,
   input         dmemresp_queue_en_Mhl,
   input         dmemresp_queue_val_Mhl,
@@ -60,8 +62,10 @@ module parc_CoreDpath
   input         stall_Dhl,
   input         stall_Xhl,
   input         stall_Mhl,
-  input stall_X2hl
-  input stall_X3hl
+  // i added this
+  input stall_X2hl,
+  input stall_X3hl,
+  // end my code
   input         stall_Whl,
 
   // Control Signals (dpath->ctrl)
@@ -180,7 +184,7 @@ module parc_CoreDpath
   // X: result computed in execute for instr currently in X
   // M: value selected for WB at end of M (either ALU/muldiv or load data)
   // W:value in W stage
-  wire [31:0] fwd_X_Dhl = execute_mux_out_Xhl;
+  wire [31:0] fwd_X_Dhl = execute_mux_out_Xhl; // forward from alu
   wire [31:0] fwd_M_Dhl = wb_mux_out_Mhl;
   wire [31:0] fwd_W_Dhl = wb_mux_out_Whl;
 
@@ -269,6 +273,7 @@ module parc_CoreDpath
   // ALU
 
   wire [31:0] alu_out_Xhl;
+  wire [31:0] execute_mux_out_Xhl = alu_out_Xhl;
 
   // Branch condition logic
 
@@ -283,21 +288,24 @@ module parc_CoreDpath
 
   // Muldiv Unit
 
+  // keeping this here because this wire DOES come out of X
   wire [63:0] muldivresp_msg_result_Xhl;
 
   // Muldiv Result Mux
 
-  wire [31:0] muldiv_mux_out_Xhl
-    = ( muldiv_mux_sel_Xhl == 1'd0 ) ? muldivresp_msg_result_Xhl[31:0]
-    : ( muldiv_mux_sel_Xhl == 1'd1 ) ? muldivresp_msg_result_Xhl[63:32]
-    :                                  32'bx;
+  // this will be MOVED to the X3 stage- will not be done in execute.
+  // instead, the output of muldiv_mux_out_Xhl should feed into it still, but we should process this in X3
+  // wire [31:0] muldiv_mux_out_Xhl
+  //   = ( muldiv_mux_sel_Xhl == 1'd0 ) ? muldivresp_msg_result_Xhl[31:0]
+  //   : ( muldiv_mux_sel_Xhl == 1'd1 ) ? muldivresp_msg_result_Xhl[63:32]
+  //   :                                  32'bx;
 
   // Execute Result Mux
 
-  wire [31:0] execute_mux_out_Xhl
-    = ( execute_mux_sel_Xhl == 1'd0 ) ? alu_out_Xhl
-    : ( execute_mux_sel_Xhl == 1'd1 ) ? muldiv_mux_out_Xhl
-    :                                   32'bx;
+  // wire [31:0] execute_mux_out_Xhl
+  //   = ( execute_mux_sel_Xhl == 1'd0 ) ? alu_out_Xhl
+  //   : ( execute_mux_sel_Xhl == 1'd1 ) ? muldiv_mux_out_Xhl
+  //   :                                   32'bx;
 
   //----------------------------------------------------------------------
   // M <- X
@@ -371,17 +379,94 @@ module parc_CoreDpath
     : ( wb_mux_sel_Mhl == 1'd1 ) ? dmemresp_queue_mux_out_Mhl
     :                              32'bx;
 
+  // my code
+  // wire [31:0] wb_mux_out_Mhl = alu_out_Xhl;
+  // end my code
+
+
+  // my code (most of which is moved from the execute stage)
+
   //----------------------------------------------------------------------
-  // W <- M
+  // X2 <- M
+  //----------------------------------------------------------------------
+
+  reg [31:0] pc_X2hl;
+  reg [31:0] wb_mux_out_X2hl;
+
+  always @ (posedge clk) begin
+    if ( reset ) begin
+      pc_X2hl <= 32'd0;
+      wb_mux_out_X2hl <= 32'd0;
+    end
+    else if ( !stall_X2hl ) begin
+      // memory || alu
+      // store output in X2 reg
+      pc_X2hl <= pc_Mhl;
+      wb_mux_out_X2hl <= wb_mux_out_Mhl;
+    end
+  end
+
+  //----------------------------------------------------------------------
+  // X2 Stage
+  //----------------------------------------------------------------------
+
+
+
+  //----------------------------------------------------------------------
+  // X3 <- X2
+  //----------------------------------------------------------------------
+
+  reg [31:0] pc_X3hl;
+  reg [31:0] wb_mux_out_X3hl;
+
+  // update instruction reg at each clock cycle with the instruction from the previous stage
+  always @ (posedge clk) begin
+    if ( reset ) begin
+      pc_X3hl            <= 32'd0;
+      wb_mux_out_X3hl    <= 32'd0;
+    end
+    else if( !stall_X3hl ) begin
+      // memory || alu
+      // store output in X2 reg
+      wb_mux_out_X3hl <= wb_mux_out_X2hl;
+      pc_X3hl <= pc_X2hl;
+    end
+  end
+
+  //----------------------------------------------------------------------
+  // X3 Stage
+  //----------------------------------------------------------------------
+
+  // Muldiv Result Mux
+
+  // choose the high or the low
+  wire [31:0] muldiv_mux_out_X3hl
+    = ( muldiv_mux_sel_X3hl == 1'd0 ) ? muldivresp_msg_result_Xhl[31:0]
+    : ( muldiv_mux_sel_X3hl == 1'd1 ) ? muldivresp_msg_result_Xhl[63:32]
+    :                                  32'bx;
+
+  // Execute Result Mux
+
+  // note that the ORIGINAL execute mux is still there but always recieving the alu signal
+  wire [31:0] wb_final_X3hl
+    = ( execute_mux_sel_X3hl == 1'd0 ) ? wb_mux_out_X3hl
+    : ( execute_mux_sel_X3hl == 1'd1 ) ? muldiv_mux_out_X3hl
+    :                                   32'bx;
+
+  // end my code
+
+  //----------------------------------------------------------------------
+  // W <- X3 (changed from M)
   //----------------------------------------------------------------------
 
   reg  [31:0] pc_Whl;
+  // note that this now chooses between alu || memory vs muldiv
   reg  [31:0] wb_mux_out_Whl;
 
   always @ (posedge clk) begin
     if( !stall_Whl ) begin
-      pc_Whl                 <= pc_Mhl;
-      wb_mux_out_Whl         <= wb_mux_out_Mhl;
+      pc_Whl                 <= pc_X3hl;
+      wb_mux_out_Whl         <= wb_final_X3hl;
     end
   end
 
@@ -454,9 +539,16 @@ module parc_CoreDpath
     .clk                   (clk),
     .reset                 (reset),
 
-    .muldivreq_msg_fn      (muldivreq_msg_fn_Xhl),
-    .muldivreq_msg_a       (op0_mux_out_Xhl),
-    .muldivreq_msg_b       (op1_mux_out_Xhl),
+    // .muldivreq_msg_fn      (muldivreq_msg_fn_Xhl),
+    .muldivreq_msg_fn      (muldivreq_msg_fn_Dhl), // replaced above with decode stage
+    // .muldivreq_msg_a       (op0_mux_out_Xhl),
+    // .muldivreq_msg_b       (op1_mux_out_Xhl),
+
+    // replaced with latched operands (registers)
+    .muldivreq_msg_a       (op0_mux_out_Dhl),
+    .muldivreq_msg_b       (op1_mux_out_Dhl),
+    // end my code
+
     .muldivreq_val         (muldivreq_val),
     .muldivreq_rdy         (muldivreq_rdy),
 
