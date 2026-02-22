@@ -42,6 +42,6 @@ sed -i '
 /1008:/ c\
     1008:	08000408 	j	1020
 ' $x;
-python ../scripts/objdump2vmh.py -f $x;
+python3 ../scripts/objdump2vmh.py -f $x;
 done
 mv dump/*.vmh vmh/

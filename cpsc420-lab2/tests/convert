@@ -20,5 +20,5 @@ mv *.d dep/
 mv parc* bin/
 for x in bin/*;do maven-objdump -D --disassemble-zeroes --section=.xcpthandler --section=.text --section=.data $x > $x.dump;done
 mv bin/*.dump dump/
-for x in dump/*;do python ../scripts/objdump2vmh.py -f $x;done
+for x in dump/*;do python3 ../scripts/objdump2vmh.py -f $x;done
 mv dump/*.vmh vmh/

@@ -38,5 +38,6 @@ parcv2_srcs += \
   parcv2-divu.S \
   parcv2-rem.S \
   parcv2-remu.S \
+  parcv2-loaduse-stall-byp.S \
 #  parcv2-mfc0.S \
 

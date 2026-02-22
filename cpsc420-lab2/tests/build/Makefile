@@ -81,7 +81,7 @@ LDFLAGS     :=
 
 # Test build
 
-CC := maven-gcc
+CC := maven-gcc -std=gnu99
 TESTBUILD := \
   $(CC) $(CFLAGS) $(LDFLAGS) \
         -T $(scripts_dir)/test.ld -nostartfiles \
@@ -95,7 +95,7 @@ RUNFLAGS      :=
 # Installation
 
 MKINSTALLDIRS := $(scripts_dir)/mk-install-dirs.sh
-INSTALL       := /usr/bin//install -c
+INSTALL       := /usr/bin/install -c
 INSTALL_EXE   := $(INSTALL) -m 555
 STOW          := 
 
