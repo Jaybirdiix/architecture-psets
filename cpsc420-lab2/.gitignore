@@ -2,3 +2,6 @@ tags
 build/*.out
 *.vcd
 build/*-sim
+../.history/*
+../../.history/*
+.history/*
