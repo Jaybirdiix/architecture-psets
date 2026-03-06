@@ -62,7 +62,8 @@ module mcparc_CoreCtrl
 
   // CP0 Status Register Output to Host
 
-  output [31:0] cp0_status
+  // output [31:0] cp0_status // i changed this line
+  output reg [31:0] cp0_status
 );
 
   //----------------------------------------------------------------------
@@ -734,7 +735,7 @@ module mcparc_CoreCtrl
   // Coprocessor 0
   //----------------------------------------------------------------------
 
-  reg [31:0] cp0_status;
+  // reg [31:0] cp0_status; // i commented this out
   reg        cp0_stats;
 
   always @ ( posedge clk ) begin
